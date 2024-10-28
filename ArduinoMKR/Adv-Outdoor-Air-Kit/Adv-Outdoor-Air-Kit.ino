@@ -1,14 +1,14 @@
 /* 
-  Green Air Explorer Kit
-  Future Education Modena 2022
+  Advanced Outdoor Air Kit
+  Future Education Modena 2024-2025
 
-  Monitora: 
-  - Umidità/Temperatura (Shield MKR Env)
-  - Illuminazione (Shield MKR Env)
-  - Umidità  del terreno (Grove Sensore Capacitivo analogico)
-  - Anidride Carbonica (Grove SCD-30)
-  - Qualità dell'Aria - inquinanti (Grove Air Quality v1.3)
-  - Particolato (Grove Dust Sensor)
+  Monitora:   
+  - Particolato PM10-PM2.5 (DFRobot SEN0460)
+  - Ozono (DFRobot SEN0321)
+  - Ossido di Carbonio (DFRobot SEN0466
+  - Ammoniaca (DFRobot SEN0469)
+  - Biossido di Azoto (DFRobot SEN0471)
+  - Metano (DFRobot SEN0129)
 */
 
 ///// NON SPOSTARE QUESTE DEFINIZIONI  /////
@@ -21,16 +21,20 @@ char dboard_server[] = "demo.thingsboard.io"; // Indirizzo IP/Internet del Dashb
 int dboard_port = 80;                         // Porta TCP del server
 
 //Variabili
-float temp_aria = 0;
-float umid_aria = 0;
-float luminosita = 0;
-int umid_terreno1 = 0;
-int umid_terreno2 = 0;
-int umid_terreno3 = 0;
-float anid_carbonica = 0;
-float particolato = 0;
-int aq_valore;
-int aq_tend;
+int pm10 = 0;
+int pm2_5 = 0;
+int ozono = 0;
+int oss_carbonio = 0;
+int ammoniaca = 0;
+int bioss_azoto = 0;
+int metano = 0;
+
+boolean pm_ON = true;
+boolean ozono_ON = true;
+boolean oss_carb_ON = true;
+boolean ammon_ON = true;
+boolean bioss_az_ON = true;
+boolean metano_ON = true;
 
 //Collegare una resistenza da 1K o il Grove Led Rosso
 #define PIN_LED1 5
@@ -42,47 +46,47 @@ void accendi_LED_per(byte volte);
 
 //Collegamento alla piattaforma GL-Blocks
 #include "GL-Blocks-WiFi.h"
-#include "GL-Blocks-Dashboard-GAX.h"
+#include "GL-Blocks-Dashboard-AOA.h"
 //*******************************************
 ///// NON SPOSTARE QUESTE DEFINIZIONI  /////
+
+#define CICLI_ATT_SENS 5
 
 #include <Wire.h>  
 
 //Libreria ENV Shield di Arduino
 //Installare da "Gestione Librerie"
 #include <Arduino_MKRENV.h>
-//https://github.com/Seeed-Studio/Seeed_SCD30
-//Libreria per Grove CO2 Hum/Temp SCD30
-//ATTENZIONE: NON INSTALLARE DA GESTIONE LIBRERIE: scaricare da repo Github
-//e copiarlo nella directory 'libraries' di Arduino!
 
-#include "SCD30.h"
-float last_ppmCO2;
+//Libreria per sensore particolato DFRobot SEN0460
+//wiki.dfrobot.com/Gravity_PM2.5_Air_Quality_Sensor_SKU_SEN0460
+#include "DFRobot_AirQualitySensor.h"
+#define PM_IICADDRESS    0x19
+DFRobot_AirQualitySensor particle(&Wire ,PM_IICADDRESS);
 
-//Libreria per Grove Air Quality Sensor 1.3
-//ATTENZIONE: NON INSTALLARE DA GESTIONE LIBRERIE: scaricare da repo Github
-//e copiarlo nella directory 'libraries' di Arduino!
-//https://github.com/Seeed-Studio/Grove_Air_quality_Sensor
-#include "Air_Quality_Sensor.h"
-//Collegare il sensore Air Quality Sensor al connettore analogico indicato
-#define PIN_AIR_QUALITY A3
-AirQualitySensor sensore_aq = AirQualitySensor(PIN_AIR_QUALITY);
-String aq_stato;
+//Libreria per sensore ozono DFRobot SEN0321
+#include "DFRobot_OzoneSensor.h"
+#define OZCOLLECT_NUMBER   20   // collect number, the collection range is 1-100
+/*   IIC slave Address, The default is ADDRESS_3
+       ADDRESS_0               0x70      // iic device address
+       ADDRESS_1               0x71
+       ADDRESS_2               0x72
+       ADDRESS_3               0x73
+*/
+#define Ozone_IICAddress OZONE_ADDRESS_3
+DFRobot_OzoneSensor ozone;
 
-//Collegare il sensore capacitivo ai connettori analogici indicato
-#define PIN_UMIDITA_1 A1
-#define PIN_UMIDITA_2 A4
-#define PIN_UMIDITA_3 A5
-
-//Collegare il sensore di particolato al connettore digitale indicato
-#define PIN_SENSORE_PARTICOLATO 3
-//Periodo di lettura
-int INTERVALLO_PARTICOLATO = 60000; //In millisecondi: 1000 = 1 sec
-
-//Misura del particolato proporzionale alla durata dell'impulso
-unsigned long durataImpulsoLow = 0;
-//Tempo di ultima lettura particolato
-long ultimaLetturaDust;
+//Libreria unica per i 3 sensori GAS
+#include "DFRobot_MultiGasSensor.h"
+//Definizioni per Sensore CO SEN0466
+#define CO_IIC_ADDRESS    0x74
+DFRobot_GAS_I2C co_sens(&Wire, CO_IIC_ADDRESS);
+//Definizioni per Sensore NH3 SEN0469
+#define NH3_IIC_ADDRESS   0x75
+DFRobot_GAS_I2C nh3_sens(&Wire, NH3_IIC_ADDRESS);
+//Definizioni per Sensore NO2 SEN0471
+#define NO2_IIC_ADDRESS   0x76
+DFRobot_GAS_I2C no2_sens(&Wire, NO2_IIC_ADDRESS);
 
 /**
  * Preperazione di Arduino: setup() 
@@ -116,15 +120,36 @@ void setup() {
     while (1);
   }   
 
-  //Avvio del Grove CO2 Temp/Hum SCD30
-  scd30.initialize();
+  //Attivazione sensore particolato
+  if (particle.begin()) Serial.println ("Sensore particolato attivo.");
+  else {
+    Serial.println("Sensore particolato SEN0460 non trovato");
+    pm_ON = false;
+  }
+  delay(500);
 
-  //Avvio del Grove Air Quality Sensor
-  sensore_aq.init();
+  //Attivazione sensore Ozono
+  if (ozone.begin(Ozone_IICAddress)) {
+    ozone.SetModes(MEASURE_MODE_PASSIVE);
+    Serial.println ("Sensore Ozono attivo.");
+  }
+  else {
+    Serial.println("Sensore Ozono SEN0321 non trovato");
+    ozono_ON = false;
+  }  
 
-  //Inizio temporizzazione particolato
-  pinMode(PIN_SENSORE_PARTICOLATO, INPUT);
-  ultimaLetturaDust = millis();
+  //Attivazione sensore CO
+  if (co_sens.begin()) {
+    co_sens.changeAcquireMode(co_sens.PASSIVITY);
+    delay(500);
+    co_sens.setTempCompensation(co_sens.OFF);  
+  }
+  else {
+    Serial.println("Sensore CO SEN0466 non trovato");
+    oss_carb_ON = false;
+  }
+
+    
 
   accendi_LED_per(3); //Lampeggia 3 volte
 

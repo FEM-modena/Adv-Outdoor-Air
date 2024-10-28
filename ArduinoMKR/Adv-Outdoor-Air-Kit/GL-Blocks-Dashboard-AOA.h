@@ -1,7 +1,7 @@
 /****
- * GL Blocks
- * Air Data Challenge - TassoniAir Data Challenge
- * Green Lab - Future Education Modena 2022
+ * GL Blocks 
+ * Advanced Outdoor Air
+ * Green Lab - Future Education Modena 2024-2025
  */
  
 unsigned long lastConnectionTime = 0;   // tempo dell'ultima connessione al server
@@ -28,31 +28,24 @@ void Trasmetti_Dati_Cloud()
  * 
  * JSON:
 {
-  "temp_aria": <temp>,
-  "umid_aria": <hum>,
-  "umid_terra1": <hum1>,
-  "umid_terra2": <hum2>,
-  "umid_terra3": <hum3>,
-  "luminosita": <lum>,
-  "anid_carb": <co2>,
-  "part": <pm10-2.5>, 
-  "aq_tend": <tend_aq>,
-  "aq_val": <val_aq> 
+  "pm10": <mg/m3-pm10>,
+  "pm2_5": <mg/m3-pm2_5>,
+  "ozono": <ppm ozono>,
+  "oss_carb": <ppm_ossido_carb>,
+  "ammon": <ppm ammoniaca>,
+  "bioss_az": <ppm_bioss_azoto>,
+  "metano": <ppm_metano>
 }
  */
 
   // Carica le misure nel documento JSON
-  doc["temp_aria"] = temp_aria;
-  doc["umid_aria"] = umid_aria;
-  doc["umid_terra1"] = umid_terreno1;
-  doc["umid_terra2"] = umid_terreno2;
-  doc["umid_terra3"] = umid_terreno3;
-  doc["luminosita"] = luminosita;
-  doc["anid_carb"] = anid_carbonica;  
-  // doc["tvoc"] = tvoc;  
-  doc["part"] = particolato;
-  doc["aq_tend"] = aq_tend;
-  doc["aq_val"] = aq_valore;
+  doc["pm10"] = pm10;
+  doc["pm2_5"] = pm2_5;
+  doc["ozono"] = ozono;
+  doc["oss_carb"] = oss_carbonio;
+  doc["ammon"] = ammoniaca;
+  doc["bioss_az"] = bioss_azoto;
+  doc["metano"] = metano;  
 
 
   // Close any connection before send a new request.
