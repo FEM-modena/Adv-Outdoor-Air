@@ -21,6 +21,8 @@ char dboard_server[] = "demo.thingsboard.io"; // Indirizzo IP/Internet del Dashb
 int dboard_port = 80;                         // Porta TCP del server
 
 //Variabili
+float temp_aria = 0.0;
+float umid_aria = 0.0;
 int pm10 = 0;
 int pm2_5 = 0;
 int ozono = 0;
@@ -73,7 +75,7 @@ DFRobot_AirQualitySensor particle(&Wire ,PM_IICADDRESS);
        ADDRESS_2               0x72
        ADDRESS_3               0x73
 */
-#define Ozone_IICAddress OZONE_ADDRESS_3
+#define OZONE_IIC_ADDRESS   0x73
 DFRobot_OzoneSensor ozone;
 
 //Libreria unica per i 3 sensori GAS
@@ -129,27 +131,54 @@ void setup() {
   delay(500);
 
   //Attivazione sensore Ozono
-  if (ozone.begin(Ozone_IICAddress)) {
-    ozone.SetModes(MEASURE_MODE_PASSIVE);
+  if (ozone.begin(OZONE_IIC_ADDRESS)) {
+    ozone.setModes(MEASURE_MODE_PASSIVE);
     Serial.println ("Sensore Ozono attivo.");
   }
   else {
     Serial.println("Sensore Ozono SEN0321 non trovato");
     ozono_ON = false;
-  }  
+  }
+  delay(500);  
 
   //Attivazione sensore CO
   if (co_sens.begin()) {
     co_sens.changeAcquireMode(co_sens.PASSIVITY);
     delay(500);
     co_sens.setTempCompensation(co_sens.OFF);  
+    Serial.println ("Sensore CO attivo.");
   }
   else {
     Serial.println("Sensore CO SEN0466 non trovato");
     oss_carb_ON = false;
   }
+  delay(500);
 
-    
+  //Attivazione sensore NH3
+  if (nh3_sens.begin()) {
+    nh3_sens.changeAcquireMode(nh3_sens.PASSIVITY);
+    delay(500);
+    nh3_sens.setTempCompensation(nh3_sens.OFF);
+    Serial.println ("Sensore NH3 attivo.");  
+  }
+  else {
+    Serial.println("Sensore NH3 SEN0469 non trovato");
+    ammon_ON = false;
+  }
+  delay(500);
+
+  //Attivazione sensore NH3
+  if (no2_sens.begin()) {
+    no2_sens.changeAcquireMode(no2_sens.PASSIVITY);
+    delay(500);
+    no2_sens.setTempCompensation(no2_sens.OFF);
+    Serial.println ("Sensore NO2 attivo.");  
+  }
+  else {
+    Serial.println("Sensore NO2 SEN0471 non trovato");
+    ammon_ON = false;
+  }
+  delay(500);
 
   accendi_LED_per(3); //Lampeggia 3 volte
 
@@ -173,57 +202,8 @@ void loop() {
   //Umidità aria dall'ENV Shield
   umid_aria = ENV.readHumidity();
 
-  //Luminosità dall'ENV Shield
-  luminosita = ENV.readIlluminance();
+  //TODO: lettura rimanenti sensori
 
-  //Lettura sensore capacitivo umidità terreno
-  umid_terreno1 = leggi_sens_umidita(PIN_UMIDITA_1);
-  umid_terreno2 = leggi_sens_umidita(PIN_UMIDITA_2);
-  umid_terreno3 = leggi_sens_umidita(PIN_UMIDITA_3);
-
-  //Misura dell'Anidride carbonica
-  float result[3] = {0};
-  //Se il risultato è disponibile, lo legge
-  if(scd30.isAvailable()) {
-    Serial.print("Misura CO2 disponibile");        
-    scd30.getCarbonDioxideConcentration(result);
-    anid_carbonica = result[0];
-    last_ppmCO2 = anid_carbonica;
-  }
-  else {
-    Serial.print("Misura CO2 non ancora disponibile: non aggiornato");        
-    anid_carbonica = last_ppmCO2;        
-  }    
-
-  //Misura del particolato
-  unsigned long durata = pulseIn(PIN_SENSORE_PARTICOLATO, LOW);
-  durataImpulsoLow = durataImpulsoLow + durata;
-
-  if ((millis() - ultimaLetturaDust) > INTERVALLO_PARTICOLATO) {
-    float ratio = durataImpulsoLow/(INTERVALLO_PARTICOLATO * 10.0);
-    particolato = 1.1*pow(ratio,3)-3.8*pow(ratio,2)+520*ratio+0.62;
-
-    durataImpulsoLow = 0;
-    ultimaLetturaDust = millis();
-  } 
-
-  //Misura dell'Air Quality
-  aq_tend = sensore_aq.slope();
-  switch (aq_tend) {
-    case 0: 
-      aq_stato = "ALLARME";
-      break;
-    case 1:
-      aq_stato = "INQUINATO";
-      break;
-    case 2:
-      aq_stato = "BASSO INQUINAMENTO";
-      break;
-    case 3:  
-      aq_stato = "QUALITA' BUONA";
-  }
-  aq_valore = sensore_aq.getValue();
-  
   accendi_LED_per(2); //Lampeggia il led per 2 volte
       
   mostra_valori_serial_monitor();
@@ -278,33 +258,7 @@ void mostra_valori_serial_monitor()
   Serial.print("Umid. aria = ");
   Serial.print(umid_aria);
   Serial.println(" %");
-
-  Serial.print("Umid. terr. s.1 = ");
-  Serial.print(umid_terreno1);
-  Serial.println(" %");
-
-  Serial.print("Umid. terr. s.2 = ");
-  Serial.print(umid_terreno2);
-  Serial.println(" %");
-
-  Serial.print("Umid. terr. s.3 = ");
-  Serial.print(umid_terreno3);
-  Serial.println(" %");
-
-  Serial.print("Illuminazione = ");
-  Serial.print(luminosita);
-  Serial.println(" lux");
-
-  Serial.print("Anid. carbonica = ");
-  Serial.print(anid_carbonica);
-  Serial.println(" ppm");
   
-  Serial.print("Particolato = ");
-  Serial.print(particolato);
-  Serial.println(" ppm");
-
-  Serial.print("Stato AQ = ");
-  Serial.println(aq_stato);
-  Serial.print("Lettura AQ = ");
-  Serial.println(aq_valore);
+  //TODO: stampa rimanenti sensori
+  
 }
