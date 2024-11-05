@@ -107,7 +107,7 @@ void setup() {
   //Attiva il Serial Monitor
   Serial.begin(9600);  
   delay(2000); //Tempo per aprire il serial monitor...
-  Serial.println("FEM - Green Air Explorer Kit");
+  Serial.println("FEM - Monitoraggio Aria Esterna");
 
   pinMode(PIN_LED1, OUTPUT);
   digitalWrite(PIN_LED1, LOW);
@@ -210,7 +210,7 @@ void loop() {
 
   //Lettura particolato
   if (pm_ON) {
-    Serial.print("Lettura Particolato...");
+    Serial.println("Lettura Particolato...");
     pm2_5= particle.gainParticleConcentration_ugm3(PARTICLE_PM2_5_STANDARD);    
     pm10 = particle.gainParticleConcentration_ugm3(PARTICLE_PM10_STANDARD);
     delay(100);
@@ -218,30 +218,31 @@ void loop() {
   
   //Lettura Ozono
   if (ozono_ON) {
-    Serial.print("Lettura Ozono...");
+    Serial.println("Lettura Ozono...");
     ozono = ozone.readOzoneData(OZONE_COLLECT_NUMBER);
     delay(100);
   }
 
   //Lettura CO
   if (oss_carb_ON) {
-    Serial.print("Lettura CO...");
+    Serial.println("Lettura CO...");
     oss_carbonio = co_sens.readGasConcentrationPPM();
     delay(100);
   }
 
   if (ammon_ON) {
-    Serial.print("Lettura NH3...");
+    Serial.println("Lettura NH3...");
     ammoniaca = nh3_sens.readGasConcentrationPPM();
     delay(100);
   }
 
   if (bioss_az_ON) {
-    Serial.print("Lettura NO2...");
+    Serial.println("Lettura NO2...");
     bioss_azoto = no2_sens.readGasConcentrationPPM();
     delay(100);
   }
 
+  Serial.println("Lettura Metano...");
   int val=analogRead(PIN_METANO);
   //TODO: aggiustamento al valore reale
   //Richiede calilbrazione!

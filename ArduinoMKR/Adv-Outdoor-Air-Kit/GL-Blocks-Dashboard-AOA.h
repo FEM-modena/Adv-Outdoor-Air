@@ -9,7 +9,7 @@ unsigned long lastConnectionTime = 0;   // tempo dell'ultima connessione al serv
 //Libreria JSON
 #include <ArduinoJson.h>  
 //vedi https://arduinojson.org/v5/assistant/
-const size_t json_capacity = JSON_OBJECT_SIZE(10) + 133; 
+const size_t json_capacity = JSON_OBJECT_SIZE(9) + 270; 
 StaticJsonDocument<json_capacity> doc;
 
 /*************************************
@@ -28,6 +28,8 @@ void Trasmetti_Dati_Cloud()
  * 
  * JSON:
 {
+  "temp_aria": <°C>,
+  "umid_aria": <%>
   "pm10": <mg/m3-pm10>,
   "pm2_5": <mg/m3-pm2_5>,
   "ozono": <ppm ozono>,
@@ -39,6 +41,8 @@ void Trasmetti_Dati_Cloud()
  */
 
   // Carica le misure nel documento JSON
+  doc["temp"] = temp_aria;
+  doc["umid"] = umid_aria;
   doc["pm10"] = pm10;
   doc["pm2_5"] = pm2_5;
   doc["ozono"] = ozono;
