@@ -15,7 +15,7 @@
 //*******************************************
 #define SECRET_SSID "FEM_WiFi"
 #define SECRET_PASS "0h4orXc@yS3do"
-#define CHIAVE_CLOUD "FEMGreenAirExplorer_serra"
+#define CHIAVE_CLOUD "FEMOutdoor_test"
 
 char dboard_server[] = "demo.thingsboard.io"; // Indirizzo IP/Internet del Dashboard Server
 int dboard_port = 80;                         // Porta TCP del server
