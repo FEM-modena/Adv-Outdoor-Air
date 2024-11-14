@@ -51,6 +51,36 @@ void accendi_LED_per(byte volte);
 //*******************************************
 ///// NON SPOSTARE QUESTE DEFINIZIONI  /////
 
+///// COSTANTI DI CALIBRAZIONE  ////
+//*******************************************
+// Ciscuna misura dispone di un fattore e di un offset additivo
+// che determina il valore effettivo inviato al sistema
+//
+// valore_effettivo = misura * FATT_CAL + ADD_CAL
+//
+// Modificare solo in caso di calibrazione lineare validata ///
+const float FATT_CAL_TEMP_ARIA = 1.0;
+const float ADD_CAL_TEMP_ARIA = 0.0;
+const float FATT_CAL_UMID_ARIA = 1.0;
+const float ADD_CAL_UMID_ARIA = 0.0;
+const float FATT_CAL_PM10 = 1.0;
+const float ADD_CAL_PM10 = 0.0;
+const float FATT_CAL_PM2_5 = 1.0;
+const float ADD_CAL_PM2_5 = 0.0;
+const float FATT_CAL_OZONO = 1.0;
+const float ADD_CAL_OZONO = 0.0;
+const float FATT_CAL_OSS_CARBONIO = 1.0;
+const float ADD_CAL_OSS_CARBONIO = 0.0;
+const float FATT_CAL_AMMONIACA = 1.0;
+const float ADD_CAL_AMMONIACA = 0.0;
+const float FATT_CAL_BIOSS_AZOTO = 1.0;
+const float ADD_CAL_BIOSS_AZOTO = 0.0;
+const float FATT_CAL_METANO = 1.0;
+const float ADD_CAL_METANO = 0.0;
+
+//*******************************************
+
+
 #define CICLI_ATT_SENS 5
 
 #include <Wire.h>  
@@ -203,42 +233,48 @@ void loop() {
   accendi_LED_per(3);
 
   //Temperatura dall'ENV Shield
-  temp_aria = ENV.readTemperature();
+  temp_aria = calibra_misura(ENV.readTemperature(), FATT_CAL_TEMP_ARIA, ADD_CAL_TEMP_ARIA);
 
   //Umidità aria dall'ENV Shield
-  umid_aria = ENV.readHumidity();
+  umid_aria = calibra_misura(ENV.readHumidity(), FATT_CAL_UMID_ARIA, ADD_CAL_UMID_ARIA);
 
   //Lettura particolato
   if (pm_ON) {
     Serial.println("Lettura Particolato...");
-    pm2_5= particle.gainParticleConcentration_ugm3(PARTICLE_PM2_5_STANDARD);    
-    pm10 = particle.gainParticleConcentration_ugm3(PARTICLE_PM10_STANDARD);
+    uint16_t pm2_5_sens = particle.gainParticleConcentration_ugm3(PARTICLE_PM2_5_STANDARD);    
+    pm2_5 = calibra_misura((float) pm2_5_sens, FATT_CAL_PM2_5, ADD_CAL_PM2_5);
+    uint16_t pm10_sens = particle.gainParticleConcentration_ugm3(PARTICLE_PM10_STANDARD);
+    pm10 = calibra_misura((float) pm10_sens, FATT_CAL_PM10, ADD_CAL_PM10);
     delay(100);
   }
   
   //Lettura Ozono
   if (ozono_ON) {
     Serial.println("Lettura Ozono...");
-    ozono = ozone.readOzoneData(OZONE_COLLECT_NUMBER);
+    uint16_t ozono_sens = ozone.readOzoneData(OZONE_COLLECT_NUMBER);
+    ozono = calibra_misura((float) ozono_sens, FATT_CAL_OZONO, ADD_CAL_OZONO);
     delay(100);
   }
 
   //Lettura CO
   if (oss_carb_ON) {
     Serial.println("Lettura CO...");
-    oss_carbonio = co_sens.readGasConcentrationPPM();
+    uint16_t oss_carbonio_sens = co_sens.readGasConcentrationPPM();
+    oss_carbonio = calibra_misura((float) oss_carbonio_sens, FATT_CAL_OSS_CARBONIO, ADD_CAL_OSS_CARBONIO);
     delay(100);
   }
 
   if (ammon_ON) {
     Serial.println("Lettura NH3...");
-    ammoniaca = nh3_sens.readGasConcentrationPPM();
+    uint16_t ammoniaca_sens = nh3_sens.readGasConcentrationPPM();
+    ammoniaca = calibra_misura((float) ammoniaca_sens, FATT_CAL_AMMONIACA, ADD_CAL_AMMONIACA);
     delay(100);
   }
 
   if (bioss_az_ON) {
     Serial.println("Lettura NO2...");
-    bioss_azoto = no2_sens.readGasConcentrationPPM();
+    uint16_t bioss_azoto_sens = no2_sens.readGasConcentrationPPM();
+    bioss_azoto = calibra_misura((float) bioss_azoto_sens, FATT_CAL_BIOSS_AZOTO, ADD_CAL_BIOSS_AZOTO);
     delay(100);
   }
 
@@ -246,7 +282,8 @@ void loop() {
   int val=analogRead(PIN_METANO);
   //TODO: aggiustamento al valore reale
   //Richiede calilbrazione!
-  metano = val * CONC_RIF_METANO / 1024;
+  int metano_sens = val * CONC_RIF_METANO / 1024;
+  metano = calibra_misura((float) metano_sens, FATT_CAL_METANO, ADD_CAL_METANO);
 
   accendi_LED_per(2); //Lampeggia il led per 2 volte
       
@@ -261,6 +298,14 @@ void loop() {
   }  
   //30 sec tra un ciclo e il prossimo
   delay(30000); 
+}
+
+/**
+ * Applica fattore e costante additiva di calibrazione 
+ * alla misura primitiva rilevata dal sensore
+ */
+float calibra_misura(float mis, float fatt, float add) {
+  return mis * fatt + add;
 }
 
 /**
